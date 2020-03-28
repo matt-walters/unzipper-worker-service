@@ -14,7 +14,7 @@ namespace UnzipperWorkerService
             Host.CreateDefaultBuilder(args)
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.AddOptions()
+                    services
                         .Configure<AppConfig>(hostContext.Configuration.GetSection("AppConfig"))
                         .AddHostedService<UnzipperWorkerService>();
                 });
