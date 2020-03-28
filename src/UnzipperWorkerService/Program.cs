@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -14,8 +15,11 @@ namespace UnzipperWorkerService
             Host.CreateDefaultBuilder(args)
                 .ConfigureServices((hostContext, services) =>
                 {
+                    var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+                    var appConfigSectionName = isWindows ? "WindowsAppConfig" : "AppConfig";
+
                     services
-                        .Configure<AppConfig>(hostContext.Configuration.GetSection("AppConfig"))
+                        .Configure<AppConfig>(hostContext.Configuration.GetSection(appConfigSectionName))
                         .AddHostedService<UnzipperWorkerService>();
                 });
     }
