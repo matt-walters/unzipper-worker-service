@@ -17,11 +17,10 @@ namespace UnzipperWorkerService
 
         private readonly IOptions<AppConfig> config;
         private readonly ILogger<UnzipperWorkerService> logger;
+        private readonly List<Task> unzipperTasks = new List<Task>();
 
         private FileSystemWatcher fileSystemWatcher;
         private BlockingCollection<string> filesToUnzip;
-
-        private readonly List<Task> unzipperTasks = new List<Task>();
 
         public UnzipperWorkerService(IOptions<AppConfig> config, ILogger<UnzipperWorkerService> logger)
         {
@@ -49,14 +48,14 @@ namespace UnzipperWorkerService
             fileSystemWatcher.Dispose();
         }
 
-        private void UnzipperWorker(CancellationToken stoppingToken)
+        private async void UnzipperWorker(CancellationToken stoppingToken)
         {
             while (true)
             {
                 try
                 {
                     var fullPath = filesToUnzip.Take(stoppingToken);
-                    UnzipFile(fullPath, stoppingToken);
+                    await UnzipFile(fullPath, stoppingToken);
                 }
                 catch(OperationCanceledException)
                 {
@@ -71,12 +70,12 @@ namespace UnzipperWorkerService
             Log($"Files to unzip contains {filesToUnzip.Count} items");
         }
 
-        private void UnzipFile(string fullPath, CancellationToken stoppingToken)
+        private async Task UnzipFile(string fullPath, CancellationToken stoppingToken)
         {
             var name = Path.GetFileName(fullPath);
             var destinationFilePath = Path.Combine(config.Value.DestinationFolderPath, Path.GetFileNameWithoutExtension(fullPath));
 
-            WaitUntilFileIsUnlocked(fullPath, stoppingToken);
+            await WaitUntilFileIsUnlocked(fullPath, stoppingToken);
 
             try
             {
@@ -95,12 +94,12 @@ namespace UnzipperWorkerService
             }
         }
 
-        private void WaitUntilFileIsUnlocked(string fileName, CancellationToken stoppingToken)
+        private async Task WaitUntilFileIsUnlocked(string fileName, CancellationToken stoppingToken)
         {
             while(IsFileLocked(fileName))
             {
                 stoppingToken.ThrowIfCancellationRequested();
-                Thread.Sleep(500);
+                await Task.Delay(500, stoppingToken);
             }
         }
 
