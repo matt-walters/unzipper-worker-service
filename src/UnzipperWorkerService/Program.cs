@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -18,7 +14,9 @@ namespace UnzipperWorkerService
             Host.CreateDefaultBuilder(args)
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.AddHostedService<Worker>();
+                    services.AddOptions()
+                        .Configure<AppConfig>(hostContext.Configuration.GetSection("AppConfig"))
+                        .AddHostedService<UnzipperWorkerService>();
                 });
     }
 }
