@@ -28,6 +28,8 @@ namespace UnzipperWorkerService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            LogConfigValues();
+
             filesToUnzip = new BlockingCollection<string>();
 
             fileSystemWatcher = new FileSystemWatcher(config.Value.SourceFolderPath, config.Value.ZipFileFilter);
@@ -65,7 +67,8 @@ namespace UnzipperWorkerService
         private void FileSystemWatcher_Created(object sender, FileSystemEventArgs e)
         {
             filesToUnzip.Add(e.FullPath);
-            Log($"Files to unzip contains {filesToUnzip.Count} items");
+            logger.LogInformation($"Added file: {e.FullPath}");
+            logger.LogInformation($"Files to unzip: {filesToUnzip.Count}.");
         }
 
         private async Task UnzipFile(string fullPath, CancellationToken stoppingToken)
@@ -77,18 +80,18 @@ namespace UnzipperWorkerService
 
             try
             {
-                ZipFile.ExtractToDirectory(fullPath, destinationFilePath);
+                ZipFile.ExtractToDirectory(fullPath, destinationFilePath, true);
 
                 if (config.Value.DeleteFileAfterUnzip)
                 {
                     File.Delete(fullPath);
                 }
 
-                Log($"Unzipped {name} ({filesToUnzip.Count} files remaining)");
+                logger.LogInformation($"Unzipped {name} ({filesToUnzip.Count} files remaining).");
             }
             catch (Exception ex)
             {
-                Log($"Failed to unzip {name}. Reason: {ex.Message}");
+                logger.LogError($"Failed to unzip {name}. Reason: {ex.Message}");
             }
         }
 
@@ -123,9 +126,16 @@ namespace UnzipperWorkerService
             return false;
         }
 
-        private void Log(string message)
+        private void LogConfigValues()
         {
-            logger.LogInformation($"{DateTime.Now.ToString("u")}: {message}");
+            var message = 
+                $"ZipFileFilter:         {config.Value.ZipFileFilter}" + Environment.NewLine + 
+                $"WorkerTaskCount:       {config.Value.WorkerTaskCount}" + Environment.NewLine + 
+                $"SourceFolderPath:      {config.Value.SourceFolderPath}" + Environment.NewLine + 
+                $"DestinationFolderPath: {config.Value.DestinationFolderPath}" + Environment.NewLine + 
+                $"DeleteFileAfterUnzip:  {config.Value.DeleteFileAfterUnzip}";
+
+            logger.LogInformation(message);
         }
     }
 }
