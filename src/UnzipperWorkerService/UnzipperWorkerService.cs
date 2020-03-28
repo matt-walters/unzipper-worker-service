@@ -13,8 +13,6 @@ namespace UnzipperWorkerService
 {
     class UnzipperWorkerService : BackgroundService
     {
-        private const string filter = "*.zip";
-
         private readonly IOptions<AppConfig> config;
         private readonly ILogger<UnzipperWorkerService> logger;
         private readonly List<Task> unzipperTasks = new List<Task>();
@@ -32,7 +30,7 @@ namespace UnzipperWorkerService
         {
             filesToUnzip = new BlockingCollection<string>();
 
-            fileSystemWatcher = new FileSystemWatcher(config.Value.SourceFolderPath, filter);
+            fileSystemWatcher = new FileSystemWatcher(config.Value.SourceFolderPath, config.Value.ZipFileFilter);
             fileSystemWatcher.Created += FileSystemWatcher_Created;
             fileSystemWatcher.EnableRaisingEvents = true;
             fileSystemWatcher.IncludeSubdirectories = false;
