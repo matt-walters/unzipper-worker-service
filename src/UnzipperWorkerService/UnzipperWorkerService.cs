@@ -15,6 +15,7 @@ namespace UnzipperWorkerService
     {
         private readonly IOptions<AppConfig> config;
         private readonly ILogger<UnzipperWorkerService> logger;
+        
         private readonly List<Task> unzipperTasks = new List<Task>();
 
         private FileSystemWatcher fileSystemWatcher;
@@ -32,7 +33,7 @@ namespace UnzipperWorkerService
 
             filesToUnzip = new BlockingCollection<string>();
 
-            fileSystemWatcher = new FileSystemWatcher(config.Value.SourceFolderPath, config.Value.ZipFileFilter);
+            fileSystemWatcher = new FileSystemWatcher(config.Value.InputDirectory, config.Value.ZipFileFilter);
             fileSystemWatcher.Created += FileSystemWatcher_Created;
             fileSystemWatcher.EnableRaisingEvents = true;
             fileSystemWatcher.IncludeSubdirectories = false;
@@ -71,27 +72,27 @@ namespace UnzipperWorkerService
             logger.LogInformation($"Files to unzip: {filesToUnzip.Count}.");
         }
 
-        private async Task UnzipFile(string fullPath, CancellationToken stoppingToken)
+        private async Task UnzipFile(string filePath, CancellationToken stoppingToken)
         {
-            var name = Path.GetFileName(fullPath);
-            var destinationFilePath = Path.Combine(config.Value.DestinationFolderPath, Path.GetFileNameWithoutExtension(fullPath));
+            var fileName = Path.GetFileName(filePath);
+            var outputDirectory = Path.Combine(config.Value.OutputDirectory, Path.GetFileNameWithoutExtension(filePath));
 
-            await WaitUntilFileIsUnlocked(fullPath, stoppingToken);
+            await WaitUntilFileIsUnlocked(filePath, stoppingToken);
 
             try
             {
-                ZipFile.ExtractToDirectory(fullPath, destinationFilePath, true);
+                ZipFile.ExtractToDirectory(filePath, outputDirectory, true);
+                logger.LogInformation($"Unzipped {filePath} ({filesToUnzip.Count} files remaining).");
 
                 if (config.Value.DeleteFileAfterUnzip)
                 {
-                    File.Delete(fullPath);
+                    File.Delete(filePath);
+                    logger.LogInformation($"Deleted {filePath}.");
                 }
-
-                logger.LogInformation($"Unzipped {name} ({filesToUnzip.Count} files remaining).");
             }
             catch (Exception ex)
             {
-                logger.LogError($"Failed to unzip {name}. Reason: {ex.Message}");
+                logger.LogError($"Failed to unzip {filePath}. Reason: {ex.Message}");
             }
         }
 
@@ -129,11 +130,11 @@ namespace UnzipperWorkerService
         private void LogConfigValues()
         {
             var message = 
-                $"ZipFileFilter:         {config.Value.ZipFileFilter}" + Environment.NewLine + 
-                $"WorkerTaskCount:       {config.Value.WorkerTaskCount}" + Environment.NewLine + 
-                $"SourceFolderPath:      {config.Value.SourceFolderPath}" + Environment.NewLine + 
-                $"DestinationFolderPath: {config.Value.DestinationFolderPath}" + Environment.NewLine + 
-                $"DeleteFileAfterUnzip:  {config.Value.DeleteFileAfterUnzip}";
+                $"InputDirectory:       {config.Value.InputDirectory}" + Environment.NewLine + 
+                $"OutputDirectory:      {config.Value.OutputDirectory}" + Environment.NewLine + 
+                $"ZipFileFilter:        {config.Value.ZipFileFilter}" + Environment.NewLine + 
+                $"WorkerTaskCount:      {config.Value.WorkerTaskCount}" + Environment.NewLine + 
+                $"DeleteFileAfterUnzip: {config.Value.DeleteFileAfterUnzip}";
 
             logger.LogInformation(message);
         }
