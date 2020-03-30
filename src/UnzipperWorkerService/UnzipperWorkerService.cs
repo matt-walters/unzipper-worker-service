@@ -49,19 +49,12 @@ namespace UnzipperWorkerService
             fileSystemWatcher.Dispose();
         }
 
-        private async void UnzipperWorker(CancellationToken stoppingToken)
+        private async Task UnzipperWorker(CancellationToken stoppingToken)
         {
             while (true)
             {
-                try
-                {
-                    var fullPath = filesToUnzip.Take(stoppingToken);
-                    await UnzipFile(fullPath, stoppingToken);
-                }
-                catch(OperationCanceledException)
-                {
-                    break;
-                }
+                var fullPath = filesToUnzip.Take(stoppingToken);
+                await UnzipFile(fullPath, stoppingToken);
             }
         }
 
@@ -100,7 +93,6 @@ namespace UnzipperWorkerService
         {
             while(IsFileLocked(fileName))
             {
-                stoppingToken.ThrowIfCancellationRequested();
                 await Task.Delay(500, stoppingToken);
             }
         }
